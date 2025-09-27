@@ -265,8 +265,7 @@ jobs:
           echo "Deployment completed successfully"
           EOF
 
-      - name: Upload and execute deployment script
-        if: ${{ success() }}
+            - name: Upload and execute deployment script (single invoke)
         uses: azure/cli@v2.1.0
         env:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
@@ -276,25 +275,17 @@ jobs:
           inlineScript: |
             set -euo pipefail
 
-            # create base64 of deploy.sh (portable: works on GNU and BSD systems)
+            # create base64 of deploy.sh
             if base64 --help 2>&1 | grep -q -- '-w'; then
               B64=$(base64 -w0 deploy.sh)
             else
               B64=$(base64 deploy.sh | tr -d '\n')
             fi
 
-            echo "Uploading deploy.sh to VM (base64)..."
+            echo "Uploading and executing deploy.sh on VM (single run-command invoke)..."
 
             az vm run-command invoke \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
-              --scripts "echo $B64 | base64 -d > /tmp/deploy.sh && chmod +x /tmp/deploy.sh"
-
-            echo "Executing deploy.sh on VM..."
-
-            az vm run-command invoke \
-              --resource-group "$AZURE_RESOURCE_GROUP" \
-              --name "$AZURE_VM_NAME" \
-              --command-id RunShellScript \
-              --scripts "sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'"
+              --scripts "echo $B64 | base64 -d > /tmp/deploy.sh && chmod +x /tmp/deploy.sh && sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'"
