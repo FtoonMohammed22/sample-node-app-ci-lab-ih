@@ -99,13 +99,8 @@ jobs:
 
       - name: Azure Login (Service Principal)
         uses: azure/login@v2
-     
-        # ------------------------------------
-        # ------- !!!!!!انتبهوا هنا ----------
         with:
-          # Check the naming of your CREDENTIALS secrets and change it
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-        # ------------------------------------
 
       - name: Upload deployment package artifact
         uses: actions/upload-artifact@v4.6.2
@@ -130,18 +125,15 @@ jobs:
             : "${AZ_STORAGE_KEY:?AZ_STORAGE_KEY missing}"
             : "${ZIP_NAME:?ZIP_NAME missing}"
 
-            # Trim stray whitespace/newlines in key
             AZ_STORAGE_KEY="$(printf %s "$AZ_STORAGE_KEY" | tr -d '\r\n')"
             export AZ_STORAGE_KEY
 
-            # Ensure container exists (idempotent)
             az storage container create \
               --name "$AZ_STORAGE_CONTAINER" \
               --account-name "$AZ_STORAGE_ACCOUNT" \
               --account-key "$AZ_STORAGE_KEY" \
               --only-show-errors 1>/dev/null
 
-            # Quick preflight
             az storage blob list \
               --account-name "$AZ_STORAGE_ACCOUNT" \
               --account-key "$AZ_STORAGE_KEY" \
@@ -158,7 +150,6 @@ jobs:
               --overwrite true \
               --only-show-errors
 
-            # Short-lived SAS URL for VM download
             SAS=$(az storage blob generate-sas \
               --account-name "$AZ_STORAGE_ACCOUNT" \
               --account-key "$AZ_STORAGE_KEY" \
@@ -280,13 +271,13 @@ jobs:
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
               --scripts "cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT_EOF'
-            $(cat deploy.sh)
-            DEPLOY_SCRIPT_EOF
-            chmod +x /tmp/deploy.sh"
-            
+$(cat deploy.sh)
+DEPLOY_SCRIPT_EOF
+chmod +x /tmp/deploy.sh"
+
             # Execute the deployment script
             az vm run-command invoke \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
-              --scripts "sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'
+              --scripts "sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'"
