@@ -274,19 +274,27 @@ jobs:
           PACKAGE_SAS_URL: ${{ env.PACKAGE_SAS_URL }}
         with:
           inlineScript: |
-            # Upload the deployment script to VM
+            set -euo pipefail
+
+            # create base64 of deploy.sh (portable: works on GNU and BSD systems)
+            if base64 --help 2>&1 | grep -q -- '-w'; then
+              B64=$(base64 -w0 deploy.sh)
+            else
+              B64=$(base64 deploy.sh | tr -d '\n')
+            fi
+
+            echo "Uploading deploy.sh to VM (base64)..."
+
             az vm run-command invoke \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
-              --scripts "cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT_EOF'
-            $(cat deploy.sh)
-            DEPLOY_SCRIPT_EOF
-            chmod +x /tmp/deploy.sh"
-            
-            # Execute the deployment script
+              --scripts "echo $B64 | base64 -d > /tmp/deploy.sh && chmod +x /tmp/deploy.sh"
+
+            echo "Executing deploy.sh on VM..."
+
             az vm run-command invoke \
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
-              --scripts "sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'
+              --scripts "sudo /tmp/deploy.sh '$PACKAGE_SAS_URL'"
