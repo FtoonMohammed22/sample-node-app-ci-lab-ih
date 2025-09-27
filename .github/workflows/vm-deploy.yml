@@ -279,10 +279,8 @@ jobs:
               --resource-group "$AZURE_RESOURCE_GROUP" \
               --name "$AZURE_VM_NAME" \
               --command-id RunShellScript \
-              --scripts "cat > /tmp/deploy.sh << 'DEPLOY_SCRIPT_EOF'
-            $(cat deploy.sh)
-            DEPLOY_SCRIPT_EOF
-            chmod +x /tmp/deploy.sh"
+            --scripts @deploy.sh
+
             
             # Execute the deployment script
             az vm run-command invoke \
